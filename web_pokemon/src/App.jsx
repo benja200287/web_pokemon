@@ -18,6 +18,8 @@ function App() {
   const [hasMore, setHasMore] = useState(false)
   const [tiposDisponibles, setTiposDisponibles] = useState([])
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
+  const [favoritos, setFavoritos] = useState([])
+  const [bloqueados, setBloqueados] = useState([])
 
   useEffect(() => {
     loadPokemons(0, false)
@@ -68,6 +70,19 @@ function App() {
 
   function handleLoadMore() {
     loadPokemons(offset + PAGE_LIMIT, true)
+  }
+
+  function toggleFavorito(id) {
+    setFavoritos((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
+  }
+
+  function toggleBloqueado(id) {
+    setBloqueados((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
+    setFavoritos((current) => current.filter((item) => item !== id))
   }
 
   async function handleSearch() {
@@ -172,6 +187,10 @@ function App() {
               imagen={activePokemon.imagen}
               altura={activePokemon.altura}
               peso={activePokemon.peso}
+              isFavorito={favoritos.includes(activePokemon.id)}
+              isBloqueado={bloqueados.includes(activePokemon.id)}
+              onToggleFavorito={() => toggleFavorito(activePokemon.id)}
+              onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
             />
           ) : (
             pokemonsFiltrados.map((pokemon) => (
@@ -184,6 +203,10 @@ function App() {
                 imagen={pokemon.imagen}
                 altura={pokemon.altura}
                 peso={pokemon.peso}
+                isFavorito={favoritos.includes(pokemon.id)}
+                isBloqueado={bloqueados.includes(pokemon.id)}
+                onToggleFavorito={() => toggleFavorito(pokemon.id)}
+                onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
               />
             ))
           )}
