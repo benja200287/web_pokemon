@@ -1,7 +1,7 @@
 function PokemonCard({ nombre, tipo, habilidad, evoluciones, imagen, altura, peso, isFavorito, isBloqueado, onToggleFavorito, onToggleBloqueado }) {
   return (
     <article className={`group rounded-[28px] border p-6 shadow-sm transition duration-300 ${isBloqueado ? 'border-rose-200 bg-rose-50/80 text-slate-500 line-through shadow-none' : 'border-slate-200/80 bg-white/90 hover:-translate-y-1 hover:shadow-2xl'}`}>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-red-600/90">
             Pokémon
@@ -9,7 +9,7 @@ function PokemonCard({ nombre, tipo, habilidad, evoluciones, imagen, altura, pes
           <h3 className={`text-2xl font-semibold ${isBloqueado ? 'text-slate-500' : 'text-slate-900'}`}>{nombre}</h3>
         </div>
 
-        <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-gradient-to-br from-red-50 via-white to-red-100 shadow-inner shadow-red-500/10">
+        <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br from-red-50 via-white to-red-100 shadow-inner shadow-red-500/10 sm:h-20 sm:w-20">
           {imagen ? (
             <img src={imagen} alt={nombre} className="h-full w-full object-contain" />
           ) : (
@@ -33,7 +33,7 @@ function PokemonCard({ nombre, tipo, habilidad, evoluciones, imagen, altura, pes
           )}
       </div>
 
-      <div className="mt-6 space-y-3 text-sm leading-7 text-slate-600">
+      <div className="mt-6 space-y-3 text-sm leading-7 text-slate-600 sm:space-y-4">
         <p>
           <span className="font-semibold text-slate-900">Habilidad:</span> {habilidad}
         </p>
@@ -46,7 +46,7 @@ function PokemonCard({ nombre, tipo, habilidad, evoluciones, imagen, altura, pes
         </p>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="button"
           onClick={onToggleFavorito}

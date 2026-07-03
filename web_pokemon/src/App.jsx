@@ -153,8 +153,8 @@ function App() {
   }
 
   return (
-    <main className="mx-auto max-w-[1180px] px-6 py-12 bg-[radial-gradient(circle_at_top_left,_rgba(254,243,199,0.9),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.9),_transparent_28%),#f8fafc]">
-      <header className="relative flex flex-col items-center gap-8 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/85 p-10 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-xl before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top,_rgba(255,248,227,0.7),_transparent_35%)] before:pointer-events-none">
+    <main className="mx-auto max-w-[1180px] px-4 py-10 sm:px-6 sm:py-12 lg:px-8 bg-[radial-gradient(circle_at_top_left,_rgba(254,243,199,0.9),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.9),_transparent_28%),#f8fafc]">
+      <header className="relative flex flex-col items-center gap-8 overflow-hidden rounded-[28px] border border-slate-200/70 bg-white/85 p-8 sm:p-10 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-xl before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top,_rgba(255,248,227,0.7),_transparent_35%)] before:pointer-events-none">
         <div className="relative z-10 flex w-full max-w-[880px] flex-col items-center gap-8 text-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-red-600">
             Pokémon World
@@ -184,7 +184,7 @@ function App() {
           </p>
         </div>
 
-        <div className="mx-auto flex w-full max-w-lg items-center justify-center gap-4 rounded-[24px] border border-slate-200/80 bg-white/90 p-2 shadow-sm">
+        <div className="mx-auto flex w-full max-w-full flex-col gap-3 rounded-[24px] border border-slate-200/80 bg-white/90 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-center sm:gap-4 sm:p-2">
           <button
             type="button"
             onClick={() => setVistaActiva('inicio')}
