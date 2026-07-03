@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import PokemonCard from './components/PokemonCard.jsx'
 import SearchBar from './components/SearchBar.jsx'
+import FiltroporTipo from './components/FiltroporTipo.jsx'
 import { mapPokeApiToPokemon, fetchEvolutionNames } from './data/pokemon.js'
 import './App.css'
 
@@ -16,6 +17,8 @@ function App() {
   const [error, setError] = useState('')
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(false)
+  const [tiposDisponibles, setTiposDisponibles] = useState([])
+  const [tipoSeleccionado, setTipoSeleccionado] = useState('')
 
   useEffect(() => {
     loadPokemons(0, false)
@@ -43,7 +46,14 @@ function App() {
       const pokemons = await Promise.all(
         data.results.map(async (pokemon) => fetchPokemonData(pokemon.url)),
       )
-      setPokemonList((current) => (append ? [...current, ...pokemons] : pokemons))
+
+      const siguienteLista = append ? [...pokemonList, ...pokemons] : pokemons
+      const tipos = Array.from(
+        new Set(siguienteLista.flatMap((pokemon) => pokemon.tipo)),
+      ).sort()
+
+      setPokemonList(siguienteLista)
+      setTiposDisponibles(tipos)
       setOffset(nextOffset)
       setHasMore(Boolean(data.next))
     } catch (err) {
@@ -52,6 +62,10 @@ function App() {
       setLoading(false)
     }
   }
+
+  const pokemonsFiltrados = tipoSeleccionado
+    ? pokemonList.filter((pokemon) => pokemon.tipo.includes(tipoSeleccionado))
+    : pokemonList
 
   function handleLoadMore() {
     loadPokemons(offset + PAGE_LIMIT, true)
@@ -118,6 +132,14 @@ function App() {
           <div className="status-banner status-loading">Buscando pokémon...</div>
         )}
 
+        {!activePokemon && (
+          <FiltroporTipo
+            tipos={tiposDisponibles}
+            tipoSeleccionado={tipoSeleccionado}
+            onSelectTipo={setTipoSeleccionado}
+          />
+        )}
+
         <div className="card-grid">
           {loading ? (
             <div className="loading-card">Cargando pokémons...</div>
@@ -132,7 +154,7 @@ function App() {
               peso={activePokemon.peso}
             />
           ) : (
-            pokemonList.map((pokemon) => (
+            pokemonsFiltrados.map((pokemon) => (
               <PokemonCard
                 key={pokemon.id}
                 nombre={pokemon.nombre}

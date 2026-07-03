@@ -306,6 +306,27 @@ input {
   color: var(--text-muted);
 }
 
+.tipo-filter {
+  margin-bottom: 28px;
+}
+
+.tipo-filter label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tipo-filter select {
+  width: 100%;
+  max-width: 320px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
