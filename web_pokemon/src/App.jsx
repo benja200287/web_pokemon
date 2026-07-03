@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import PokemonCard from './components/PokemonCard.jsx'
+import SearchBar from './components/SearchBar.jsx'
 import { mapPokeApiToPokemon, fetchEvolutionNames } from './data/pokemon.js'
 import './App.css'
 
@@ -93,19 +94,12 @@ function App() {
         <div className="hero-copy">
           <span className="eyebrow">Pokémon World</span>
           <h1>Explora, selecciona y conoce distintos pokémons</h1>
-          <div className="search-bar">
-            <input
-              type="search"
-              placeholder="Buscar Pokémon"
-              aria-label="Buscar Pokémon"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <button type="button" onClick={handleSearch}>
-              Buscar
-            </button>
-          </div>
+          <SearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            onSearch={handleSearch}
+            onKeyDown={handleKeyDown}
+          />
         </div>
       </header>
 
