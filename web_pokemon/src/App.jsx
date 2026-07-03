@@ -76,7 +76,7 @@ function App() {
       const pokemon = await fetchPokemonData(response.url)
       setActivePokemon(pokemon)
     } catch (err) {
-      setError('Pokémon no encontrado. Prueba con nombres como Pikachu o Bulbasaur.')
+      setError('Pokémon no encontrado. Prueba con un Pokémon que sea válido')
     } finally {
       setSearchLoading(false)
     }
