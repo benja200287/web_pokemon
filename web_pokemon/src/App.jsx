@@ -20,6 +20,7 @@ function App() {
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
   const [favoritos, setFavoritos] = useState([])
   const [bloqueados, setBloqueados] = useState([])
+  const [vistaActiva, setVistaActiva] = useState('inicio')
 
   useEffect(() => {
     loadPokemons(0, false)
@@ -84,9 +85,24 @@ function App() {
     }
   }
 
-  const pokemonsFiltrados = tipoSeleccionado
-    ? pokemonList.filter((pokemon) => pokemon.tipo.includes(tipoSeleccionado))
-    : pokemonList
+  const getSelectedPokemons = (ids) => {
+    const encontrados = pokemonList.filter((pokemon) => ids.includes(pokemon.id))
+
+    if (activePokemon && ids.includes(activePokemon.id) && !encontrados.some((pokemon) => pokemon.id === activePokemon.id)) {
+      return [activePokemon, ...encontrados]
+    }
+
+    return encontrados
+  }
+
+  const favoritosSeleccionados = getSelectedPokemons(favoritos)
+  const bloqueadosSeleccionados = getSelectedPokemons(bloqueados)
+
+  const pokemonsFiltrados = pokemonList
+    .filter((pokemon) => !bloqueados.includes(pokemon.id))
+    .filter((pokemon) =>
+      tipoSeleccionado ? pokemon.tipo.includes(tipoSeleccionado) : true,
+    )
 
   function handleLoadMore() {
     loadPokemons(offset + PAGE_LIMIT, true)
@@ -161,87 +177,186 @@ function App() {
       <section className="mt-12">
         <div className="mx-auto mb-7 grid max-w-2xl gap-2 text-center">
           <div>
-            <h2 className="text-3xl font-semibold text-slate-900">
-              {activePokemon ? 'Resultado de búsqueda' : 'Pokémons'}
-            </h2>
+            <h2 className="text-3xl font-semibold text-slate-900">Tus selecciones</h2>
           </div>
           <p className="text-slate-500 leading-7">
-            {activePokemon
-              ? 'Revisa los datos del pokémon que encontraste.'
-              : 'Explora el mundo Pokémon: descubre tipos, habilidades, evoluciones, altura y peso. Marca tus favoritos y bloquea los que menos te gusten.'}
+            Selecciona Favoritos o Bloqueados para ver esa vista aparte del inicio.
           </p>
         </div>
 
-        {error && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
-            {error}
-          </div>
-        )}
-        {searchLoading && (
-          <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm font-semibold text-sky-700">
-            Buscando pokémon...
-          </div>
-        )}
-
-        {!activePokemon && (
-          <div className="mb-10 flex justify-center">
-            <FiltroporTipo
-              tipos={tiposDisponibles}
-              tipoSeleccionado={tipoSeleccionado}
-              onSelectTipo={setTipoSeleccionado}
-            />
-          </div>
-        )}
-
-        <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-          {loading ? (
-            <div className="col-span-full rounded-[18px] border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-              Cargando pokémons...
-            </div>
-          ) : activePokemon ? (
-            <PokemonCard
-              nombre={activePokemon.nombre}
-              tipo={activePokemon.tipo}
-              habilidad={activePokemon.habilidad.join(', ')}
-              evoluciones={activePokemon.evoluciones}
-              imagen={activePokemon.imagen}
-              altura={activePokemon.altura}
-              peso={activePokemon.peso}
-              isFavorito={favoritos.includes(activePokemon.id)}
-              isBloqueado={bloqueados.includes(activePokemon.id)}
-              onToggleFavorito={() => toggleFavorito(activePokemon.id)}
-              onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
-            />
-          ) : (
-            pokemonsFiltrados.map((pokemon) => (
-              <PokemonCard
-                key={pokemon.id}
-                nombre={pokemon.nombre}
-                tipo={pokemon.tipo}
-                habilidad={pokemon.habilidad.join(', ')}
-                evoluciones={pokemon.evoluciones}
-                imagen={pokemon.imagen}
-                altura={pokemon.altura}
-                peso={pokemon.peso}
-                isFavorito={favoritos.includes(pokemon.id)}
-                isBloqueado={bloqueados.includes(pokemon.id)}
-                onToggleFavorito={() => toggleFavorito(pokemon.id)}
-                onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
-              />
-            ))
-          )}
+        <div className="mx-auto flex w-full max-w-lg items-center justify-center gap-4 rounded-[24px] border border-slate-200/80 bg-white/90 p-2 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setVistaActiva('inicio')}
+            className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'inicio' ? 'bg-slate-900 text-white shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            Inicio
+          </button>
+          <button
+            type="button"
+            onClick={() => setVistaActiva('favoritos')}
+            className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'favoritos' ? 'bg-amber-400 text-slate-950 shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            Favoritos ({favoritosSeleccionados.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setVistaActiva('bloqueados')}
+            className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'bloqueados' ? 'bg-slate-700 text-white shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
+          >
+            Bloqueados ({bloqueadosSeleccionados.length})
+          </button>
         </div>
 
-        {!activePokemon && hasMore && !loading && (
-          <div className="mt-8 flex justify-center">
-            <button
-              type="button"
-              className="rounded-full bg-red-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-red-500/15 transition hover:bg-red-700"
-              onClick={handleLoadMore}
-            >
-              Cargar más pokémons
-            </button>
+        {vistaActiva === 'favoritos' && (
+          <div className="mt-8 rounded-[28px] border border-amber-100 bg-amber-50/80 p-6 shadow-sm">
+            <h3 className="text-xl font-semibold text-slate-900">Favoritos</h3>
+            <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que marcaste como favoritos.</p>
+            {favoritosSeleccionados.length === 0 ? (
+              <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                Aún no tienes pokémons favoritos.
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {favoritosSeleccionados.map((pokemon) => (
+                  <PokemonCard
+                    key={pokemon.id}
+                    nombre={pokemon.nombre}
+                    tipo={pokemon.tipo}
+                    habilidad={pokemon.habilidad.join(', ')}
+                    evoluciones={pokemon.evoluciones}
+                    imagen={pokemon.imagen}
+                    altura={pokemon.altura}
+                    peso={pokemon.peso}
+                    isFavorito={true}
+                    isBloqueado={bloqueados.includes(pokemon.id)}
+                    onToggleFavorito={() => toggleFavorito(pokemon.id)}
+                    onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
+        )}
+
+        {vistaActiva === 'bloqueados' && (
+          <div className="mt-8 rounded-[28px] border border-slate-300 bg-slate-50 p-6 shadow-sm">
+            <h3 className="text-xl font-semibold text-slate-900">Bloqueados</h3>
+            <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que decidiste bloquear.</p>
+            {bloqueadosSeleccionados.length === 0 ? (
+              <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+                No hay pokémons bloqueados.
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {bloqueadosSeleccionados.map((pokemon) => (
+                  <PokemonCard
+                    key={pokemon.id}
+                    nombre={pokemon.nombre}
+                    tipo={pokemon.tipo}
+                    habilidad={pokemon.habilidad.join(', ')}
+                    evoluciones={pokemon.evoluciones}
+                    imagen={pokemon.imagen}
+                    altura={pokemon.altura}
+                    peso={pokemon.peso}
+                    isFavorito={favoritos.includes(pokemon.id)}
+                    isBloqueado={true}
+                    onToggleFavorito={() => toggleFavorito(pokemon.id)}
+                    onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {vistaActiva === 'inicio' && (
+          <section className="mt-12">
+            <div className="mx-auto mb-7 grid max-w-2xl gap-2 text-center">
+              <div>
+                <h2 className="text-3xl font-semibold text-slate-900">
+                  {activePokemon ? 'Resultado de búsqueda' : 'Pokémons'}
+                </h2>
+              </div>
+              <p className="text-slate-500 leading-7">
+                {activePokemon
+                  ? 'Revisa los datos del pokémon que encontraste.'
+                  : 'Explora el mundo Pokémon: descubre tipos, habilidades, evoluciones, altura y peso. Marca tus favoritos y bloquea los que menos te gusten.'}
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
+                {error}
+              </div>
+            )}
+            {searchLoading && (
+              <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm font-semibold text-sky-700">
+                Buscando pokémon...
+              </div>
+            )}
+
+            {!activePokemon && (
+              <div className="mb-10 flex justify-center">
+                <FiltroporTipo
+                  tipos={tiposDisponibles}
+                  tipoSeleccionado={tipoSeleccionado}
+                  onSelectTipo={setTipoSeleccionado}
+                />
+              </div>
+            )}
+
+            <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+              {loading ? (
+                <div className="col-span-full rounded-[18px] border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                  Cargando pokémons...
+                </div>
+              ) : activePokemon ? (
+                <PokemonCard
+                  nombre={activePokemon.nombre}
+                  tipo={activePokemon.tipo}
+                  habilidad={activePokemon.habilidad.join(', ')}
+                  evoluciones={activePokemon.evoluciones}
+                  imagen={activePokemon.imagen}
+                  altura={activePokemon.altura}
+                  peso={activePokemon.peso}
+                  isFavorito={favoritos.includes(activePokemon.id)}
+                  isBloqueado={bloqueados.includes(activePokemon.id)}
+                  onToggleFavorito={() => toggleFavorito(activePokemon.id)}
+                  onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
+                />
+              ) : (
+                pokemonsFiltrados.map((pokemon) => (
+                  <PokemonCard
+                    key={pokemon.id}
+                    nombre={pokemon.nombre}
+                    tipo={pokemon.tipo}
+                    habilidad={pokemon.habilidad.join(', ')}
+                    evoluciones={pokemon.evoluciones}
+                    imagen={pokemon.imagen}
+                    altura={pokemon.altura}
+                    peso={pokemon.peso}
+                    isFavorito={favoritos.includes(pokemon.id)}
+                    isBloqueado={bloqueados.includes(pokemon.id)}
+                    onToggleFavorito={() => toggleFavorito(pokemon.id)}
+                    onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
+                  />
+                ))
+              )}
+            </div>
+
+            {!activePokemon && hasMore && !loading && (
+              <div className="mt-8 flex justify-center">
+                <button
+                  type="button"
+                  className="rounded-full bg-red-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-red-500/15 transition hover:bg-red-700"
+                  onClick={handleLoadMore}
+                >
+                  Cargar más pokémons
+                </button>
+              </div>
+            )}
+          </section>
         )}
       </section>
 
