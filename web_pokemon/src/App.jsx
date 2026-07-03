@@ -25,6 +25,26 @@ function App() {
     loadPokemons(0, false)
   }, [])
 
+  useEffect(() => {
+    const savedFavoritos = localStorage.getItem('favoritos')
+    const savedBloqueados = localStorage.getItem('bloqueados')
+
+    if (savedFavoritos) {
+      setFavoritos(JSON.parse(savedFavoritos))
+    }
+    if (savedBloqueados) {
+      setBloqueados(JSON.parse(savedBloqueados))
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('favoritos', JSON.stringify(favoritos))
+  }, [favoritos])
+
+  useEffect(() => {
+    localStorage.setItem('bloqueados', JSON.stringify(bloqueados))
+  }, [bloqueados])
+
   async function fetchPokemonData(url) {
     const response = await fetch(url)
     const data = await response.json()
