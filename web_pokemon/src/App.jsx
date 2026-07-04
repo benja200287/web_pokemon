@@ -8,6 +8,7 @@ import { useLocalStorage } from './hooks/useLocalStorage.js'
 
 const API_BASE = 'https://pokeapi.co/api/v2'
 const PAGE_LIMIT = 16
+const TIPOS_DE_FILTRO = ['Acero', 'Hielo', 'Eléctrico', 'Roca', 'Tierra', 'Lucha', 'Hada', 'Psíquico', 'Dragón', 'Fantasma', 'Siniestro']
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -27,7 +28,7 @@ function App() {
   } = usePokemonFetch()
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(false)
-  const [tiposDisponibles, setTiposDisponibles] = useState([])
+  const [tiposDisponibles, setTiposDisponibles] = useState(TIPOS_DE_FILTRO)
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
   const [favoritos, setFavoritos] = useLocalStorage('favoritos', [])
   const [bloqueados, setBloqueados] = useLocalStorage('bloqueados', [])
@@ -61,7 +62,10 @@ function App() {
     setPokemonList((prevList) => {
       const siguienteLista = append ? [...prevList, ...pokemons] : pokemons
       const tipos = Array.from(
-        new Set(siguienteLista.flatMap((pokemon) => pokemon.tipo)),
+        new Set([
+          ...siguienteLista.flatMap((pokemon) => pokemon.tipo.map((tipo) => String(tipo).trim())),
+          ...TIPOS_DE_FILTRO.map((tipo) => String(tipo).trim()),
+        ]),
       ).sort()
 
       setTiposDisponibles(tipos)
@@ -95,9 +99,16 @@ function App() {
   const pokemonsFiltrados = pokemonList
     .filter((pokemon) => !bloqueados.includes(pokemon.id))
     .filter((pokemon) => !favoritos.includes(pokemon.id))
-    .filter((pokemon) =>
-      tipoSeleccionado ? pokemon.tipo.includes(tipoSeleccionado) : true,
-    )
+    .filter((pokemon) => {
+      if (!tipoSeleccionado) {
+        return true
+      }
+
+      const tipoBuscado = String(tipoSeleccionado).trim().toLowerCase()
+      return pokemon.tipo.some((tipo) =>
+        String(tipo).trim().toLowerCase() === tipoBuscado,
+      )
+    })
 
   function handleLoadMore() {
     loadPokemons(offset + PAGE_LIMIT, true)
@@ -270,6 +281,7 @@ function App() {
               <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
                 {activePokemon && !bloqueados.includes(activePokemon.id) ? (
                   <PokemonCard
+                    id={activePokemon.id}
                     nombre={activePokemon.nombre}
                     tipo={activePokemon.tipo}
                     habilidad={activePokemon.habilidad.join(', ')}
@@ -293,6 +305,7 @@ function App() {
                     </div>
                   ) : activePokemon && !bloqueados.includes(activePokemon.id) ? (
                     <PokemonCard
+                      id={activePokemon.id}
                       nombre={activePokemon.nombre}
                       tipo={activePokemon.tipo}
                       habilidad={activePokemon.habilidad.join(', ')}
@@ -309,6 +322,7 @@ function App() {
                     pokemonsFiltrados.map((pokemon) => (
                       <PokemonCard
                         key={pokemon.id}
+                        id={pokemon.id}
                         nombre={pokemon.nombre}
                         tipo={pokemon.tipo}
                         habilidad={pokemon.habilidad.join(', ')}
@@ -373,6 +387,7 @@ function App() {
                             {favoritosSeleccionados.map((pokemon) => (
                               <PokemonCard
                                 key={pokemon.id}
+                                id={pokemon.id}
                                 nombre={pokemon.nombre}
                                 tipo={pokemon.tipo}
                                 habilidad={pokemon.habilidad.join(', ')}
@@ -420,6 +435,7 @@ function App() {
                     {bloqueadosSeleccionados.map((pokemon) => (
                       <PokemonCard
                         key={pokemon.id}
+                        id={pokemon.id}
                         nombre={pokemon.nombre}
                         tipo={pokemon.tipo}
                         habilidad={pokemon.habilidad.join(', ')}

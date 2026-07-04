@@ -70,7 +70,10 @@ export async function mapPokeApiToPokemon(apiData, speciesData, evolutionNames) 
       apiData.sprites.other['official-artwork'].front_default ||
       apiData.sprites.front_default ||
       '',
-    tipo: apiData.types.map((item) => traducirTipo(item.type.name)),
+    tipo: apiData.types
+      .map((item) => traducirTipo(item.type.name))
+      .map((tipo) => String(tipo).trim())
+      .filter(Boolean),
     habilidad,
     altura: apiData.height,
     peso: apiData.weight,
