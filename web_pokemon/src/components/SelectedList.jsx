@@ -1,7 +1,4 @@
-import React from 'react'
-import PokemonCard from './PokemonCard.jsx'
-
-export default function SelectedList({ favoritosSeleccionados, bloqueadosSeleccionados, favoritos, bloqueados, toggleFavorito, toggleBloqueado, vistaActiva }) {
+export default function SelectedList({ favoritosSeleccionados, bloqueadosSeleccionados, favoritos, bloqueados, toggleFavorito, toggleBloqueado }) {
   return (
     <aside className="rounded-[28px] border border-slate-200/80 bg-white/90 p-6 shadow-sm lg:sticky lg:top-24">
       <div className="flex items-center justify-between gap-3">

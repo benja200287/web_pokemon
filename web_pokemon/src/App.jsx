@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import PokemonCard from './components/PokemonCard.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import FiltroporTipo from './components/FiltroporTipo.jsx'
-import Estadisticas from './components/estadisticas.jsx'
 import { mapPokeApiToPokemon, fetchEvolutionNames } from './data/pokemon.js'
 import { usePokemonFetch } from './data/usePokemon.js'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
@@ -14,8 +13,18 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [pokemonList, setPokemonList] = useState([])
   const [activePokemon, setActivePokemon] = useState(null)
-  const listFetch = usePokemonFetch({ manual: true })
-  const searchFetch = usePokemonFetch({ manual: true })
+  const {
+    fetchData: fetchListData,
+    loading: listLoading,
+    error: listError,
+    setError: setListError,
+  } = usePokemonFetch()
+  const {
+    fetchData: fetchSearchData,
+    loading: searchLoading,
+    error: searchError,
+    setError: setSearchError,
+  } = usePokemonFetch()
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [tiposDisponibles, setTiposDisponibles] = useState([])
@@ -25,13 +34,7 @@ function App() {
   const [vistaActiva, setVistaActiva] = useState('inicio')
   const [searchActive, setSearchActive] = useState(false)
 
-  useEffect(() => {
-    loadPokemons(0, false)
-  }, [])
-
-  
-
-  async function fetchPokemonData(url) {
+  const fetchPokemonData = useCallback(async (url) => {
     const response = await fetch(url)
     const data = await response.json()
     const speciesResponse = await fetch(data.species.url)
@@ -39,17 +42,15 @@ function App() {
     const evoluciones = await fetchEvolutionNames(speciesData.evolution_chain.url)
 
     return mapPokeApiToPokemon(data, speciesData, evoluciones)
-  }
+  }, [])
 
-  async function loadPokemons(nextOffset, append) {
-    const response = await listFetch.fetchData(
+  const loadPokemons = useCallback(async (nextOffset, append) => {
+    const response = await fetchListData(
       `${API_BASE}/pokemon?limit=${PAGE_LIMIT}&offset=${nextOffset}`,
     )
 
     if (!response) {
-      if (!listFetch.error) {
-        listFetch.setError('No se pudo cargar la lista de pokémons. Revisa tu conexión.')
-      }
+      setListError('No se pudo cargar la lista de pokémons. Revisa tu conexión.')
       return
     }
 
@@ -57,16 +58,26 @@ function App() {
       response.results.map(async (pokemon) => fetchPokemonData(pokemon.url)),
     )
 
-    const siguienteLista = append ? [...pokemonList, ...pokemons] : pokemons
-    const tipos = Array.from(
-      new Set(siguienteLista.flatMap((pokemon) => pokemon.tipo)),
-    ).sort()
+    setPokemonList((prevList) => {
+      const siguienteLista = append ? [...prevList, ...pokemons] : pokemons
+      const tipos = Array.from(
+        new Set(siguienteLista.flatMap((pokemon) => pokemon.tipo)),
+      ).sort()
 
-    setPokemonList(siguienteLista)
-    setTiposDisponibles(tipos)
-    setOffset(nextOffset)
-    setHasMore(Boolean(response.next))
-  }
+      setTiposDisponibles(tipos)
+      setOffset(nextOffset)
+      setHasMore(Boolean(response.next))
+      return siguienteLista
+    })
+  }, [fetchPokemonData, fetchListData])
+
+  useEffect(() => {
+    async function init() {
+      await loadPokemons(0, false)
+    }
+
+    init()
+  }, [loadPokemons])
 
   const getSelectedPokemons = (ids) => {
     const encontrados = pokemonList.filter((pokemon) => ids.includes(pokemon.id))
@@ -112,15 +123,15 @@ function App() {
 
     setVistaActiva('inicio')
     setSearchActive(true)
-    searchFetch.setError('')
+    setSearchError('')
     setActivePokemon(null)
 
     const searchUrl = `${API_BASE}/pokemon/${searchTerm.trim().toLowerCase()}`
-    const response = await searchFetch.fetchData(searchUrl)
+    const response = await fetchSearchData(searchUrl)
 
     if (!response) {
       setActivePokemon(null)
-      searchFetch.setError('Pokémon no encontrado. Prueba con un Pokémon que sea válido')
+      setSearchError('Pokémon no encontrado. Prueba con un Pokémon que sea válido')
       return
     }
 
@@ -129,7 +140,7 @@ function App() {
       setActivePokemon(pokemon)
     } catch {
       setActivePokemon(null)
-      searchFetch.setError('No se pudo obtener el pokémon. Intenta nuevamente.')
+      setSearchError('No se pudo obtener el pokémon. Intenta nuevamente.')
     }
   }
 
@@ -144,7 +155,7 @@ function App() {
     if (!value.trim()) {
       setSearchActive(false)
       setActivePokemon(null)
-      searchFetch.setError('')
+      setSearchError('')
     }
   }
 
@@ -157,10 +168,10 @@ function App() {
           <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
             MUNDO POKÉMON
           </span>
-          <h1 className="text-[clamp(2.3rem,2rem+1.4vw,3.4rem)] leading-tight text-slate-900">
+          <h1 className="text-[clamp(2rem,1.9rem+0.8vw,2.8rem)] font-extrabold leading-tight tracking-[-0.02em] text-slate-900 sm:text-[2.8rem] lg:text-[3rem]">
             Explora, selecciona y conoce distintos pokémons
           </h1>
-          <p className="max-w-[560px] text-slate-500 text-lg leading-8">
+          <p className="mx-auto max-w-[640px] text-slate-600 text-base leading-8 sm:text-lg sm:leading-9">
             Descubre tipos, habilidades, evoluciones, altura y peso de tus pokémons favoritos.
           </p>
           <SearchBar
@@ -174,54 +185,185 @@ function App() {
       </header>
 
       <section className="mt-12">
-        {!showSearchResults && (
-          <>
-            <div className="mx-auto mb-7 grid max-w-2xl gap-2 text-center">
+        {vistaActiva === 'inicio' && (
+          <section className="mt-12">
+            <div className="mx-auto mb-8 grid max-w-2xl gap-4 text-center">
               <div>
-                <h2 className="text-3xl font-semibold text-slate-900">Tus selecciones</h2>
+                <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
+                  {showSearchResults ? 'Resultado de búsqueda' : 'Pokémons'}
+                </h2>
               </div>
-              <p className="text-slate-500 leading-7">
-                Selecciona Favoritos o Bloqueados para ver esa vista aparte del inicio.
+              <p className="mx-auto max-w-xl text-base sm:text-lg text-slate-700 leading-8">
+                {showSearchResults
+                  ? 'Revisa el resultado de tu búsqueda.'
+                  : 'Explora el mundo Pokémon: descubre tipos, habilidades, evoluciones, altura y peso. Marca tus favoritos y bloquea los que menos te gusten.'}
               </p>
             </div>
 
-            <div className="mx-auto flex w-full max-w-full flex-col gap-3 rounded-[24px] border border-slate-200/80 bg-white/90 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-center sm:gap-4 sm:p-2">
-              <button
-                type="button"
-                onClick={() => setVistaActiva('inicio')}
-                className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'inicio' ? 'bg-slate-900 text-white shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
-              >
-                Inicio
-              </button>
-              <button
-                type="button"
-                onClick={() => setVistaActiva('favoritos')}
-                className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'favoritos' ? 'bg-amber-400 text-slate-950 shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
-              >
-                Favoritos ({favoritosSeleccionados.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setVistaActiva('bloqueados')}
-                className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'bloqueados' ? 'bg-slate-700 text-white shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
-              >
-                Bloqueados ({bloqueadosSeleccionados.length})
-              </button>
-            </div>
-          </>
+            {!showSearchResults && (
+              <>
+                <div className="mb-10 flex flex-col items-center">
+                  <div className="w-full max-w-[420px]">
+                    <FiltroporTipo
+                      tipos={tiposDisponibles}
+                      tipoSeleccionado={tipoSeleccionado}
+                      onSelectTipo={setTipoSeleccionado}
+                    />
+                  </div>
+                </div>
+
+                <div className="mx-auto mb-7 grid max-w-2xl gap-4 rounded-[32px] border border-red-100 bg-red-50/80 px-8 py-6 text-center shadow-sm shadow-red-100">
+                  <div>
+                    <h2 className="text-4xl font-extrabold tracking-tight text-slate-900">
+                      Tus selecciones
+                    </h2>
+                  </div>
+                  <p className="mx-auto max-w-xl text-base text-slate-700 leading-8">
+                    Selecciona Favoritos o Bloqueados para ver esa vista aparte del inicio.
+                  </p>
+                </div>
+
+                <div className="mx-auto flex w-full max-w-full flex-col gap-3 rounded-[24px] border border-slate-200/80 bg-white/90 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-center sm:gap-4 sm:p-2">
+                  <button
+                    type="button"
+                    onClick={() => setVistaActiva('inicio')}
+                    className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'inicio' ? 'bg-slate-900 text-white shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    Inicio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVistaActiva('favoritos')}
+                    className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'favoritos' ? 'bg-amber-400 text-slate-950 shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    Favoritos ({favoritosSeleccionados.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVistaActiva('bloqueados')}
+                    className={`flex-1 rounded-[18px] px-4 py-3 text-sm font-semibold transition ${vistaActiva === 'bloqueados' ? 'bg-slate-700 text-white shadow-lg' : 'bg-transparent text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    Bloqueados ({bloqueadosSeleccionados.length})
+                  </button>
+                </div>
+
+                <div className="mx-auto mt-6 mb-8 max-w-[420px] text-center">
+                  <div className="inline-flex rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-800 shadow-sm">
+                    Pokémons cargados: <span className="font-black text-red-900">{pokemonList.length}</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {searchLoading && (
+              <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm font-semibold text-sky-700">
+                Buscando pokémon...
+              </div>
+            )}
+            {searchError && (
+              <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
+                {searchError}
+              </div>
+            )}
+
+            {showSearchResults ? (
+              <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+                {activePokemon && !bloqueados.includes(activePokemon.id) ? (
+                  <PokemonCard
+                    nombre={activePokemon.nombre}
+                    tipo={activePokemon.tipo}
+                    habilidad={activePokemon.habilidad.join(', ')}
+                    evoluciones={activePokemon.evoluciones}
+                    imagen={activePokemon.imagen}
+                    altura={activePokemon.altura}
+                    peso={activePokemon.peso}
+                    isFavorito={favoritos.includes(activePokemon.id)}
+                    isBloqueado={bloqueados.includes(activePokemon.id)}
+                    onToggleFavorito={() => toggleFavorito(activePokemon.id)}
+                    onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+                  {listLoading && pokemonList.length === 0 ? (
+                    <div className="col-span-full rounded-[18px] border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                      Cargando pokémons...
+                    </div>
+                  ) : activePokemon && !bloqueados.includes(activePokemon.id) ? (
+                    <PokemonCard
+                      nombre={activePokemon.nombre}
+                      tipo={activePokemon.tipo}
+                      habilidad={activePokemon.habilidad.join(', ')}
+                      evoluciones={activePokemon.evoluciones}
+                      imagen={activePokemon.imagen}
+                      altura={activePokemon.altura}
+                      peso={activePokemon.peso}
+                      isFavorito={favoritos.includes(activePokemon.id)}
+                      isBloqueado={bloqueados.includes(activePokemon.id)}
+                      onToggleFavorito={() => toggleFavorito(activePokemon.id)}
+                      onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
+                    />
+                  ) : (
+                    pokemonsFiltrados.map((pokemon) => (
+                      <PokemonCard
+                        key={pokemon.id}
+                        nombre={pokemon.nombre}
+                        tipo={pokemon.tipo}
+                        habilidad={pokemon.habilidad.join(', ')}
+                        evoluciones={pokemon.evoluciones}
+                        imagen={pokemon.imagen}
+                        altura={pokemon.altura}
+                        peso={pokemon.peso}
+                        isFavorito={favoritos.includes(pokemon.id)}
+                        isBloqueado={bloqueados.includes(pokemon.id)}
+                        onToggleFavorito={() => toggleFavorito(pokemon.id)}
+                        onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
+                      />
+                    ))
+                  )}
+                </div>
+
+                {!activePokemon && hasMore && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      className={`rounded-full px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-red-500/15 transition ${listLoading ? 'bg-slate-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                      onClick={handleLoadMore}
+                      disabled={listLoading}
+                    >
+                      {listLoading ? 'Cargando...' : 'Cargar más pokémons'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.75fr_0.95fr]">
           <div className="space-y-6">
               {vistaActiva === 'favoritos' && (
                       <div className="rounded-[28px] border border-amber-100 bg-amber-50/80 p-6 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-xl font-semibold text-slate-900">Tu lista de favoritos</h3>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-xl font-semibold text-slate-900">Tu lista de favoritos</h3>
+                            <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que marcaste como favoritos.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setVistaActiva('inicio')}
+                            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                          >
+                            Volver al inicio
+                          </button>
+                        </div>
+                        <div className="mt-4 flex items-center gap-3">
                           <span className="inline-flex h-7 items-center rounded-full bg-red-600 px-3 text-sm font-semibold text-white">
                             {favoritosSeleccionados.length}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que marcaste como favoritos.</p>
                         {favoritosSeleccionados.length === 0 ? (
                           <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
                             Aún no tienes pokémons favoritos.
@@ -251,13 +393,24 @@ function App() {
 
             {vistaActiva === 'bloqueados' && (
               <div className="rounded-[28px] border border-slate-300 bg-slate-50 p-6 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-xl font-semibold text-slate-900">Tu lista de bloqueados</h3>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-slate-900">Tu lista de bloqueados</h3>
+                    <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que decidiste bloquear.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setVistaActiva('inicio')}
+                    className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    Volver al inicio
+                  </button>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
                   <span className="inline-flex h-7 items-center rounded-full bg-red-600 px-3 text-sm font-semibold text-white">
                     {bloqueadosSeleccionados.length}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que decidiste bloquear.</p>
                 {bloqueadosSeleccionados.length === 0 ? (
                   <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
                     No hay pokémons bloqueados.
@@ -283,122 +436,6 @@ function App() {
                   </div>
                 )}
               </div>
-            )}
-
-            {vistaActiva === 'inicio' && (
-              <section className="mt-12">
-                <div className="mx-auto mb-7 grid max-w-2xl gap-2 text-center">
-                  <div>
-                    <h2 className="text-3xl font-semibold text-slate-900">
-                      {showSearchResults ? 'Resultado de búsqueda' : 'Pokémons'}
-                    </h2>
-                  </div>
-                  <p className="text-slate-500 leading-7">
-                    {showSearchResults
-                      ? 'Revisa el resultado de tu búsqueda.'
-                      : 'Explora el mundo Pokémon: descubre tipos, habilidades, evoluciones, altura y peso. Marca tus favoritos y bloquea los que menos te gusten.'}
-                  </p>
-                </div>
-
-                {searchFetch.loading && (
-                  <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm font-semibold text-sky-700">
-                    Buscando pokémon...
-                  </div>
-                )}
-                {searchFetch.error && (
-                  <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
-                    {searchFetch.error}
-                  </div>
-                )}
-
-                {showSearchResults ? (
-                  <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-                    {activePokemon && !bloqueados.includes(activePokemon.id) ? (
-                      <PokemonCard
-                        nombre={activePokemon.nombre}
-                        tipo={activePokemon.tipo}
-                        habilidad={activePokemon.habilidad.join(', ')}
-                        evoluciones={activePokemon.evoluciones}
-                        imagen={activePokemon.imagen}
-                        altura={activePokemon.altura}
-                        peso={activePokemon.peso}
-                        isFavorito={favoritos.includes(activePokemon.id)}
-                        isBloqueado={bloqueados.includes(activePokemon.id)}
-                        onToggleFavorito={() => toggleFavorito(activePokemon.id)}
-                        onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
-                      />
-                    ) : null}
-                  </div>
-                ) : (
-                  <>
-                    {!activePokemon && (
-                      <div className="mb-10 flex flex-col items-center">
-                        <div className="w-full max-w-[420px]">
-                          <FiltroporTipo
-                            tipos={tiposDisponibles}
-                            tipoSeleccionado={tipoSeleccionado}
-                            onSelectTipo={setTipoSeleccionado}
-                          />
-                        </div>
-                        <div className="mt-3 text-sm text-slate-600">
-                          Pokémons cargados: <span className="font-semibold text-slate-900">{pokemonList.length}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-                      {listFetch.loading ? (
-                        <div className="col-span-full rounded-[18px] border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-                          Cargando pokémons...
-                        </div>
-                      ) : activePokemon && !bloqueados.includes(activePokemon.id) ? (
-                        <PokemonCard
-                          nombre={activePokemon.nombre}
-                          tipo={activePokemon.tipo}
-                          habilidad={activePokemon.habilidad.join(', ')}
-                          evoluciones={activePokemon.evoluciones}
-                          imagen={activePokemon.imagen}
-                          altura={activePokemon.altura}
-                          peso={activePokemon.peso}
-                          isFavorito={favoritos.includes(activePokemon.id)}
-                          isBloqueado={bloqueados.includes(activePokemon.id)}
-                          onToggleFavorito={() => toggleFavorito(activePokemon.id)}
-                          onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
-                        />
-                      ) : (
-                        pokemonsFiltrados.map((pokemon) => (
-                          <PokemonCard
-                            key={pokemon.id}
-                            nombre={pokemon.nombre}
-                            tipo={pokemon.tipo}
-                            habilidad={pokemon.habilidad.join(', ')}
-                            evoluciones={pokemon.evoluciones}
-                            imagen={pokemon.imagen}
-                            altura={pokemon.altura}
-                            peso={pokemon.peso}
-                            isFavorito={favoritos.includes(pokemon.id)}
-                            isBloqueado={bloqueados.includes(pokemon.id)}
-                            onToggleFavorito={() => toggleFavorito(pokemon.id)}
-                            onToggleBloqueado={() => toggleBloqueado(pokemon.id)}
-                          />
-                        ))
-                      )}
-                    </div>
-
-                    {!activePokemon && hasMore && !listFetch.loading && (
-                      <div className="mt-8 flex justify-center">
-                        <button
-                          type="button"
-                          className="rounded-full bg-red-600 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-red-500/15 transition hover:bg-red-700"
-                          onClick={handleLoadMore}
-                        >
-                          Cargar más pokémons
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </section>
             )}
           </div>
 

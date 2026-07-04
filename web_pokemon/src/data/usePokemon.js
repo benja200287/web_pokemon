@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-export function usePokemonFetch({ manual = false, initialData = null } = {}) {
+export function usePokemonFetch({ initialData = null } = {}) {
   const [data, setData] = useState(initialData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
