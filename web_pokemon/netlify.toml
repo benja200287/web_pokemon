@@ -1,6 +1,7 @@
 [build]
   command = "npm run build"
-  publish = "web_pokemon/web_pokemon/dist"
+  publish = "dist"
+
 
 [[redirects]]
   from = "/*"
