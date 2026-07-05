@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import PokemonCard from './components/PokemonCard.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import FiltroporTipo from './components/FiltroporTipo.jsx'
+import BotonPokebola from './components/BotonPokebola.jsx'
+import BotonVolverInicio from './components/BotonVolverInicio.jsx'
 import { mapPokeApiToPokemon, fetchEvolutionNames } from './data/pokemon.js'
 import { usePokemonFetch } from './data/usePokemon.js'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
@@ -93,8 +95,8 @@ function App() {
     return encontrados
   }
 
-  const favoritosSeleccionados = getSelectedPokemons(favoritos)
-  const bloqueadosSeleccionados = getSelectedPokemons(bloqueados)
+  const favoritosSeleccionados = getSelectedPokemons(favoritos).filter((p) => !bloqueados.includes(p.id))
+  const bloqueadosSeleccionados = getSelectedPokemons(bloqueados).filter((p) => !favoritos.includes(p.id))
 
   const pokemonsFiltrados = pokemonList
     .filter((pokemon) => !bloqueados.includes(pokemon.id))
@@ -118,6 +120,15 @@ function App() {
     setFavoritos((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     )
+
+    // If the favorite was added from a search result (activePokemon), ensure
+    // the full pokemon object is present in the list so SelectedList can display it.
+    if (activePokemon && activePokemon.id === id) {
+      setPokemonList((current) => {
+        if (current.some((p) => p.id === id)) return current
+        return [activePokemon, ...current]
+      })
+    }
   }
 
   function toggleBloqueado(id) {
@@ -125,6 +136,15 @@ function App() {
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     )
     setFavoritos((current) => current.filter((item) => item !== id))
+
+    // If the blocked was added from a search result (activePokemon), ensure
+    // the full pokemon object is present in the list so SelectedList can display it.
+    if (activePokemon && activePokemon.id === id) {
+      setPokemonList((current) => {
+        if (current.some((p) => p.id === id)) return current
+        return [activePokemon, ...current]
+      })
+    }
   }
 
   async function handleSearch() {
@@ -278,23 +298,31 @@ function App() {
             )}
 
             {showSearchResults ? (
-              <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
-                {activePokemon && !bloqueados.includes(activePokemon.id) ? (
-                  <PokemonCard
-                    id={activePokemon.id}
-                    nombre={activePokemon.nombre}
-                    tipo={activePokemon.tipo}
-                    habilidad={activePokemon.habilidad.join(', ')}
-                    evoluciones={activePokemon.evoluciones}
-                    imagen={activePokemon.imagen}
-                    altura={activePokemon.altura}
-                    peso={activePokemon.peso}
-                    isFavorito={favoritos.includes(activePokemon.id)}
-                    isBloqueado={bloqueados.includes(activePokemon.id)}
-                    onToggleFavorito={() => toggleFavorito(activePokemon.id)}
-                    onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
-                  />
-                ) : null}
+              <div>
+                <div className="mb-4 flex justify-end">
+                  <BotonVolverInicio setVistaActiva={setVistaActiva} setSearchActive={setSearchActive} setActivePokemon={setActivePokemon}>
+                    Volver al inicio
+                  </BotonVolverInicio>
+                </div>
+
+                <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+                  {activePokemon && !bloqueados.includes(activePokemon.id) ? (
+                    <PokemonCard
+                      id={activePokemon.id}
+                      nombre={activePokemon.nombre}
+                      tipo={activePokemon.tipo}
+                      habilidad={activePokemon.habilidad.join(', ')}
+                      evoluciones={activePokemon.evoluciones}
+                      imagen={activePokemon.imagen}
+                      altura={activePokemon.altura}
+                      peso={activePokemon.peso}
+                      isFavorito={favoritos.includes(activePokemon.id)}
+                      isBloqueado={bloqueados.includes(activePokemon.id)}
+                      onToggleFavorito={() => toggleFavorito(activePokemon.id)}
+                      onToggleBloqueado={() => toggleBloqueado(activePokemon.id)}
+                    />
+                  ) : null}
+                </div>
               </div>
             ) : (
               <>
@@ -365,13 +393,9 @@ function App() {
                             <h3 className="text-xl font-semibold text-slate-900">Tu lista de favoritos</h3>
                             <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que marcaste como favoritos.</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setVistaActiva('inicio')}
-                            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                          >
+                          <BotonVolverInicio setVistaActiva={setVistaActiva}>
                             Volver al inicio
-                          </button>
+                          </BotonVolverInicio>
                         </div>
                         <div className="mt-4 flex items-center gap-3">
                           <span className="inline-flex h-7 items-center rounded-full bg-red-600 px-3 text-sm font-semibold text-white">
@@ -413,13 +437,9 @@ function App() {
                     <h3 className="text-xl font-semibold text-slate-900">Tu lista de bloqueados</h3>
                     <p className="mt-2 text-sm text-slate-500">Revisa los pokémons que decidiste bloquear.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setVistaActiva('inicio')}
-                    className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                  >
+                  <BotonVolverInicio setVistaActiva={setVistaActiva}>
                     Volver al inicio
-                  </button>
+                  </BotonVolverInicio>
                 </div>
                 <div className="mt-4 flex items-center gap-3">
                   <span className="inline-flex h-7 items-center rounded-full bg-red-600 px-3 text-sm font-semibold text-white">
@@ -455,9 +475,10 @@ function App() {
             )}
           </div>
 
+          
+
         </div>
       </section>
-
       <footer className="mt-12 border-t border-slate-200 pt-8 text-center text-sm text-slate-500">
         <p>Pagina de pokémons creada por Benjamin Morales Yañez</p>
       </footer>
