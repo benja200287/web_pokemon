@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import PokemonCard from './components/PokemonCard.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import FiltroporTipo from './components/FiltroporTipo.jsx'
-import BotonPokebola from './components/BotonPokebola.jsx'
 import BotonVolverInicio from './components/BotonVolverInicio.jsx'
 import { mapPokeApiToPokemon, fetchEvolutionNames } from './data/pokemon.js'
 import { usePokemonFetch } from './data/usePokemon.js'
@@ -19,8 +18,6 @@ function App() {
   const {
     fetchData: fetchListData,
     loading: listLoading,
-    error: listError,
-    setError: setListError,
   } = usePokemonFetch()
   const {
     fetchData: fetchSearchData,
@@ -57,16 +54,6 @@ function App() {
   const [bloqueados, setBloqueados] = useLocalStorage('bloqueados', [])
   const [vistaActiva, setVistaActiva] = useState('inicio')
   const [searchActive, setSearchActive] = useState(false)
-
-  const fetchPokemonData = useCallback(async (url) => {
-    const response = await fetch(url)
-    const data = await response.json()
-    const speciesResponse = await fetch(data.species.url)
-    const speciesData = await speciesResponse.json()
-    const evoluciones = await fetchEvolutionNames(speciesData.evolution_chain.url)
-
-    return mapPokeApiToPokemon(data, speciesData, evoluciones)
-  }, [])
 
   useEffect(() => {
     async function init() {
