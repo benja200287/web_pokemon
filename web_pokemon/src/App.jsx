@@ -7,6 +7,7 @@ import BotonVolverInicio from './components/BotonVolverInicio.jsx'
 import { mapPokeApiToPokemon, fetchEvolutionNames } from './data/pokemon.js'
 import { usePokemonFetch } from './data/usePokemon.js'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
+import { usePokemonList } from './hooks/usePokemonList.js'
 
 const API_BASE = 'https://pokeapi.co/api/v2'
 const PAGE_LIMIT = 16
@@ -14,7 +15,6 @@ const TIPOS_DE_FILTRO = ['Acero', 'Hielo', 'Eléctrico', 'Roca', 'Tierra', 'Luch
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [pokemonList, setPokemonList] = useState([])
   const [activePokemon, setActivePokemon] = useState(null)
   const {
     fetchData: fetchListData,
@@ -28,9 +28,30 @@ function App() {
     error: searchError,
     setError: setSearchError,
   } = usePokemonFetch()
-  const [offset, setOffset] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [tiposDisponibles, setTiposDisponibles] = useState(TIPOS_DE_FILTRO)
+  const fetchPokemonData = useCallback(async (url) => {
+    const response = await fetch(url)
+    const data = await response.json()
+    const speciesResponse = await fetch(data.species.url)
+    const speciesData = await speciesResponse.json()
+    const evoluciones = await fetchEvolutionNames(speciesData.evolution_chain.url)
+
+    return mapPokeApiToPokemon(data, speciesData, evoluciones)
+  }, [])
+
+  const {
+    pokemonList,
+    tiposDisponibles,
+    offset,
+    hasMore,
+    loadPokemons,
+    addPokemon,
+  } = usePokemonList({
+    tiposBase: TIPOS_DE_FILTRO,
+    fetchListData,
+    fetchPokemonData,
+    pageLimit: PAGE_LIMIT,
+    apiBase: API_BASE,
+  })
   const [tipoSeleccionado, setTipoSeleccionado] = useState('')
   const [favoritos, setFavoritos] = useLocalStorage('favoritos', [])
   const [bloqueados, setBloqueados] = useLocalStorage('bloqueados', [])
@@ -46,36 +67,6 @@ function App() {
 
     return mapPokeApiToPokemon(data, speciesData, evoluciones)
   }, [])
-
-  const loadPokemons = useCallback(async (nextOffset, append) => {
-    const response = await fetchListData(
-      `${API_BASE}/pokemon?limit=${PAGE_LIMIT}&offset=${nextOffset}`,
-    )
-
-    if (!response) {
-      setListError('No se pudo cargar la lista de pokémons. Revisa tu conexión.')
-      return
-    }
-
-    const pokemons = await Promise.all(
-      response.results.map(async (pokemon) => fetchPokemonData(pokemon.url)),
-    )
-
-    setPokemonList((prevList) => {
-      const siguienteLista = append ? [...prevList, ...pokemons] : pokemons
-      const tipos = Array.from(
-        new Set([
-          ...siguienteLista.flatMap((pokemon) => pokemon.tipo.map((tipo) => String(tipo).trim())),
-          ...TIPOS_DE_FILTRO.map((tipo) => String(tipo).trim()),
-        ]),
-      ).sort()
-
-      setTiposDisponibles(tipos)
-      setOffset(nextOffset)
-      setHasMore(Boolean(response.next))
-      return siguienteLista
-    })
-  }, [fetchPokemonData, fetchListData])
 
   useEffect(() => {
     async function init() {
@@ -122,12 +113,9 @@ function App() {
     )
 
     // If the favorite was added from a search result (activePokemon), ensure
-    // the full pokemon object is present in the list so SelectedList can display it.
+    // the full pokemon object is present in the list.
     if (activePokemon && activePokemon.id === id) {
-      setPokemonList((current) => {
-        if (current.some((p) => p.id === id)) return current
-        return [activePokemon, ...current]
-      })
+      addPokemon(activePokemon)
     }
   }
 
@@ -138,12 +126,9 @@ function App() {
     setFavoritos((current) => current.filter((item) => item !== id))
 
     // If the blocked was added from a search result (activePokemon), ensure
-    // the full pokemon object is present in the list so SelectedList can display it.
+    // the full pokemon object is present in the list.
     if (activePokemon && activePokemon.id === id) {
-      setPokemonList((current) => {
-        if (current.some((p) => p.id === id)) return current
-        return [activePokemon, ...current]
-      })
+      addPokemon(activePokemon)
     }
   }
 
